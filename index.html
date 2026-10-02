@@ -23,16 +23,16 @@
         device-orientation-permission-ui="enabled: false">
         
         <a-assets>
-            <!-- Unga video file name -->
+            <!-- Video asset -->
             <video id="ar-video" src="video.mp4" preload="auto" response-type="arraybuffer" loop crossorigin webkit-playsinline playsinline></video>
         </a-assets>
 
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-        <!-- Image Target Index 0 (First Target) -->
+        <!-- Image Target Index 0 -->
         <a-entity mindar-image-target="targetIndex: 0" id="target-entity">
-            <!-- Video auto-fit to match poster proportion -->
-            <a-video src="#ar-video" position="0 0 0" rotation="0 0 0" width="1" height="1.414" 
+            <!-- Video plane: Script dynamic-ah height & width auto-fit pannum -->
+            <a-video id="video-display" src="#ar-video" position="0 0 0" rotation="0 0 0" width="1" height="1"
                      material="shader: flat; transparent: true;">
             </a-video>
         </a-entity>
@@ -43,18 +43,47 @@
             const sceneEl = document.querySelector('a-scene');
             const videoEl = document.querySelector('#ar-video');
             const targetEl = document.querySelector('#target-entity');
+            const videoDisplay = document.querySelector('#video-display');
+
+            // Video-oda actual aspect ratio calculate panni auto-fit pannum function
+            function autoFitVideo() {
+                if (videoEl.videoWidth && videoEl.videoHeight) {
+                    const ratio = videoEl.videoHeight / videoEl.videoWidth;
+                    videoDisplay.setAttribute('width', '1');
+                    videoDisplay.setAttribute('height', ratio.toString());
+                    console.log(`Video auto-fitted: Width = 1, Height = ${ratio}`);
+                }
+            }
+
+            // Video metadata load aagum bodhu call aagum
+            videoEl.addEventListener('loadedmetadata', autoFitVideo);
+
+            // Cache aagi erkanave ready-ah irundha direct-ah call aagum
+            if (videoEl.readyState >= 1) {
+                autoFitVideo();
+            }
 
             sceneEl.addEventListener('arReady', () => {
-                console.log("MindAR is ready, camera opened without white screen!");
+                console.log("MindAR is ready, camera ready!");
             });
 
-            // Target screen-la vantha video play agum, ponna pause agum
+            // Target track aana play aagum
             targetEl.addEventListener('targetFound', () => {
-                videoEl.play();
+                videoEl.play().catch(err => {
+                    console.log("Autoplay restriction:", err);
+                });
             });
 
+            // Target miss aana pause aagum
             targetEl.addEventListener('targetLost', () => {
                 videoEl.pause();
+            });
+
+            // Mobile-la autoplay audio issue varama irukka screen touch click handler
+            window.addEventListener('click', () => {
+                if (videoEl.paused) {
+                    videoEl.play();
+                }
             });
         });
     </script>
