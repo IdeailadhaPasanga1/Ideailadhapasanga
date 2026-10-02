@@ -1,91 +1,79 @@
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Live Wallposter</title>
-    <!-- MindAR & A-Frame Libraries -->
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: black;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Idea Iladha Pasanga AR</title>
+  
+  <!-- A-Frame & MindAR Scripts -->
+  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+  
+  <style>
+    body { margin: 0; overflow: hidden; }
+    /* Audio Unlock Screen Design */
+    #start-button {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      color: white; display: flex; justify-content: center; align-items: center;
+      font-size: 22px; font-family: sans-serif; font-weight: bold;
+      z-index: 9999; cursor: pointer;
+    }
+  </style>
 </head>
 <body>
-    <a-scene 
-        mindar-image="imageTargetSrc: targets.mind; uiLoading: yes; uiScanning: yes; uiError: yes;" 
-        color-space="sRGB" 
-        renderer="colorManagement: true, physicallyCorrectLights: true" 
-        vr-mode-ui="enabled: false" 
-        device-orientation-permission-ui="enabled: false">
-        
-        <a-assets>
-            <!-- Video asset -->
-            <video id="ar-video" src="video.mp4" preload="auto" response-type="arraybuffer" loop crossorigin webkit-playsinline playsinline></video>
-        </a-assets>
+  
+  <!-- Audio Fix: User must tap screen once to allow sound -->
+  <div id="start-button">Tap to Start AR Experience 🎬</div>
 
-        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+  <a-scene mindar-image="imageTargetSrc: ./targets.mind;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+    
+    <a-assets>
+      <!-- webkit-playsinline & crossorigin is MUST for iOS and Audio -->
+      <video id="ar-video" src="./video.mp4" playsinline webkit-playsinline loop crossorigin="anonymous"></video>
+    </a-assets>
 
-        <!-- Image Target Index 0 -->
-        <a-entity mindar-image-target="targetIndex: 0" id="target-entity">
-            <!-- Video plane: Script dynamic-ah height & width auto-fit pannum -->
-            <a-video id="video-display" src="#ar-video" position="0 0 0" rotation="0 0 0" width="1" height="1"
-                     material="shader: flat; transparent: true;">
-            </a-video>
-        </a-entity>
-    </a-scene>
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const sceneEl = document.querySelector('a-scene');
-            const videoEl = document.querySelector('#ar-video');
-            const targetEl = document.querySelector('#target-entity');
-            const videoDisplay = document.querySelector('#video-display');
+    <!-- targetIndex: 0 refers to the first image in your targets.mind file -->
+    <a-entity id="target-entity" mindar-image-target="targetIndex: 0">
+      <!-- 
+        Auto Fit Logic: width="1" automatically matches your target width. 
+        Note: Adjust 'height' based on your video shape.
+        - Square Video -> height="1"
+        - Portrait (Vertical/Phone size) -> height="1.5" or "1.778"
+        - Landscape (Movie size) -> height="0.562"
+      -->
+      <a-video src="#ar-video" position="0 0 0" width="1" height="1.5"></a-video>
+    </a-entity>
+    
+  </a-scene>
 
-            // Video-oda actual aspect ratio calculate panni auto-fit pannum function
-            function autoFitVideo() {
-                if (videoEl.videoWidth && videoEl.videoHeight) {
-                    const ratio = videoEl.videoHeight / videoEl.videoWidth;
-                    videoDisplay.setAttribute('width', '1');
-                    videoDisplay.setAttribute('height', ratio.toString());
-                    console.log(`Video auto-fitted: Width = 1, Height = ${ratio}`);
-                }
-            }
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      const startButton = document.getElementById("start-button");
+      const video = document.getElementById("ar-video");
+      const target = document.getElementById("target-entity");
 
-            // Video metadata load aagum bodhu call aagum
-            videoEl.addEventListener('loadedmetadata', autoFitVideo);
+      // 1. Unlock Audio on Tap
+      startButton.addEventListener("click", function() {
+        startButton.style.display = "none"; 
+        video.play();
+        video.pause(); // Audio engine is now unlocked!
+      });
 
-            // Cache aagi erkanave ready-ah irundha direct-ah call aagum
-            if (videoEl.readyState >= 1) {
-                autoFitVideo();
-            }
+      // 2. Play video when Camera sees the image
+      target.addEventListener("targetFound", () => {
+        video.play();
+      });
 
-            sceneEl.addEventListener('arReady', () => {
-                console.log("MindAR is ready, camera ready!");
-            });
-
-            // Target track aana play aagum
-            targetEl.addEventListener('targetFound', () => {
-                videoEl.play().catch(err => {
-                    console.log("Autoplay restriction:", err);
-                });
-            });
-
-            // Target miss aana pause aagum
-            targetEl.addEventListener('targetLost', () => {
-                videoEl.pause();
-            });
-
-            // Mobile-la autoplay audio issue varama irukka screen touch click handler
-            window.addEventListener('click', () => {
-                if (videoEl.paused) {
-                    videoEl.play();
-                }
-            });
-        });
-    </script>
+      // 3. Pause video if the image is moved away from camera
+      target.addEventListener("targetLost", () => {
+        video.pause();
+      });
+    });
+  </script>
 </body>
 </html>
